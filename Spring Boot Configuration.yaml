@@ -1,0 +1,17 @@
+```yaml
+spring:
+  application:
+    name: kyc-document-processing
+camunda.bpm:
+  admin-user:
+    id: admin
+    password: admin
+  filter:
+    create: All tasks
+  database:
+    type: h2
+  webapp:
+    index-redirect-enabled: false
+server:
+  port: 8080
+```

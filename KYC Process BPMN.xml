@@ -1,0 +1,66 @@
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="kyc-process" isExecutable="true">
+        <bpmn:startEvent id="StartEvent_1">
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="ExtractPassportData" name="Extract Passport Data"
+                          camunda:class="com.example.kyc.service.PassportDataExtractor">
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:subProcess id="ValidateData" name="Data Validation">
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+            <bpmn:outgoing>Flow_3</bpmn:outgoing>
+            <bpmn:serviceTask id="DataValidation" name="Validate Data"
+                              camunda:class="com.example.kyc.service.DataValidator">
+                <bpmn:incoming>Flow_4</bpmn:incoming>
+                <bpmn:outgoing>Flow_5</bpmn:outgoing>
+            </bpmn:serviceTask>
+            <bpmn:startEvent id="SubStartEvent">
+                <bpmn:outgoing>Flow_4</bpmn:outgoing>
+            </bpmn:startEvent>
+            <bpmn:endEvent id="SubEndEvent">
+                <bpmn:incoming>Flow_5</bpmn:incoming>
+            </bpmn:endEvent>
+        </bpmn:subProcess>
+        <bpmn:serviceTask id="SanctionsCheck" name="Sanctions Check" camunda:connectorId="http-connector">
+            <bpmn:extensionElements>
+                <camunda:connector>
+                    <camunda:inputOutput>
+                        <camunda:inputParameter name="url">https://mock-sanctions-api.example.com/check</camunda:inputParameter>
+                        <camunda:inputParameter name="method">POST</camunda:inputParameter>
+                        <camunda:inputParameter name="headers">
+                            {
+                                "Content-Type": "application/json",
+                                "Authorization": "Bearer your-sanctions-api-key"
+                            }
+                        </camunda:inputParameter>
+                        <camunda:inputParameter name="body">
+                            {
+                                "name": "${customerName}"
+                            }
+                        </camunda:inputParameter>
+                        <camunda:outputParameter name="sanctionsMatch">${response.body.match}</camunda:outputParameter>
+                    </camunda:inputOutput>
+                </camunda:connector>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_3</bpmn:incoming>
+            <bpmn:outgoing>Flow_6</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:exclusiveGateway id="Gateway_SanctionsCheck">
+            <bpmn:incoming>Flow_6</bpmn:incoming>
+            <bpmn:outgoing>Flow_8</bpmn:outgoing>
+            <bpmn:outgoing>Flow_9</bpmn:outgoing>
+        </bpmn:exclusiveGateway>
+        <bpmn:serviceTask id="CreateAccount" name="Create Account">
+            <bpmn:incoming>Flow_8</bpmn:incoming>
+            <bpmn:outgoing>Flow_10</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:user
