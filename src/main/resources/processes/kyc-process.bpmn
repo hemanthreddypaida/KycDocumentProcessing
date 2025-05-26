@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="kyc-process" isExecutable="true">
+        <bpmn:startEvent id="StartEvent_1">
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="ExtractPassportData" name="Extract Passport Data"
+                          camunda:class="com.example.kyc.service.PassportDataExtractor">
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:subProcess id="ValidateData" name="Data Validation">
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+            <bpmn:outgoing>Flow_3</bpmn:outgoing>
+            <bpmn:serviceTask id="DataValidation" name="Validate Data"
+                              camunda:class="com.example.kyc.service.DataValidator">
+                <bpmn:incoming>Flow_4</bpmn:incoming>
+                <bpmn:outgoing>Flow_5</bpmn:outgoing>
+            </bpmn:serviceTask>
+            <bpmn:startEvent id="SubStartEvent">
+                <bpmn:outgoing>Flow_4</bpmn:outgoing>
+            </bpmn:startEvent>
+            <bpmn:endEvent id="SubEndEvent">
+                <bpmn:incoming>Flow_5</bpmn:incoming>
+            </bpmn:endEvent>
+        </bpmn:subProcess>
+        <bpmn:serviceTask id="SanctionsCheck" name="Sanctions Check" camunda:connectorId="http-connector">
+            <bpmn:extensionElements>
+                <camunda:connector>
+                    <camunda:inputOutput>
+                        <camunda:inputParameter name="url">https://mock-sanctions-api.example.com/check</camunda:inputParameter>
+                        <camunda:inputParameter name="method">POST</camunda:inputParameter>
+                        <camunda:inputParameter name="headers">
+                            {
+                                "Content-Type": "application/json",
+                                "Authorization": "Bearer your-sanctions-api-key"
+                            }
+                        </camunda:inputParameter>
+                        <camunda:inputParameter name="body">
+                            {
+                                "name": "${customerName}"
+                            }
+                        </camunda:inputParameter>
+                        <camunda:outputParameter name="sanctionsMatch">${response.body.match}</camunda:outputParameter>
+                    </camunda:inputOutput>
+                </camunda:connector>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_3</bpmn:incoming>
+            <bpmn:outgoing>Flow_6</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:exclusiveGateway id="Gateway_SanctionsCheck">
+            <bpmn:incoming>Flow_6</bpmn:incoming>
+            <bpmn:outgoing>Flow_8</bpmn:outgoing>
+            <bpmn:outgoing>Flow_9</bpmn:outgoing>
+        </bpmn:exclusiveGateway>
+        <bpmn:serviceTask id="CreateAccount" name="Create Account">
+            <bpmn:incoming>Flow_8</bpmn:incoming>
+            <bpmn:outgoing>Flow_10</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:userTask id="ComplianceReview" name="Compliance Review" camunda:assignee="complianceOfficer">
+            <bpmn:incoming>Flow_9</bpmn:incoming>
+            <bpmn:outgoing>Flow_11</bpmn:outgoing>
+        </bpmn:userTask>
+        <bpmn:endEvent id="EndEvent_1">
+            <bpmn:incoming>Flow_10</bpmn:incoming>
+            <bpmn:incoming>Flow_11</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ExtractPassportData"/>
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="ExtractPassportData" targetRef="ValidateData"/>
+        <bpmn:sequenceFlow id="Flow_3" sourceRef="ValidateData" targetRef="SanctionsCheck"/>
+        <bpmn:sequenceFlow id="Flow_4" sourceRef="SubStartEvent" targetRef="DataValidation"/>
+        <bpmn:sequenceFlow id="Flow_5" sourceRef="DataValidation" targetRef="SubEndEvent"/>
+        <bpmn:sequenceFlow id="Flow_6" sourceRef="SanctionsCheck" targetRef="Gateway_SanctionsCheck"/>
+        <bpmn:sequenceFlow id="Flow_8" sourceRef="Gateway_SanctionsCheck" targetRef="CreateAccount">
+            <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${sanctionsMatch == false}</bpmn:conditionExpression>
+        </bpmn:sequenceFlow>
+        <bpmn:sequenceFlow id="Flow_9" sourceRef="Gateway_SanctionsCheck" targetRef="ComplianceReview">
+            <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${sanctionsMatch == true}</bpmn:conditionExpression>
+        </bpmn:sequenceFlow>
+        <bpmn:sequenceFlow id="Flow_10" sourceRef="CreateAccount" targetRef="EndEvent_1"/>
+        <bpmn:sequenceFlow id="Flow_11" sourceRef="ComplianceReview" targetRef="EndEvent_1"/>
+    </bpmn:process>
+</bpmn:definitions>
