@@ -43,7 +43,8 @@
                         </camunda:inputParameter>
                         <camunda:inputParameter name="body">
                             {
-                                "name": "${customerName}"
+                                "name": "${customerName}",
+                                "dateOfBirth": "${dateOfBirth}"
                             }
                         </camunda:inputParameter>
                         <camunda:outputParameter name="sanctionsMatch">${response.body.match}</camunda:outputParameter>
